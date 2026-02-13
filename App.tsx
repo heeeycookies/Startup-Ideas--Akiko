@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AppView, PaymentMethod, MerchantDetails } from './types';
 import { PAYMENT_METHODS, APP_THEME } from './constants';
@@ -13,10 +14,21 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [tip, setTip] = useState<string>("");
   const [balance, setBalance] = useState<number>(0.00);
+  const [user, setUser] = useState<{ name: string; email: string } | null>(null);
 
   // Exchange Rate State
   const [baseAmount, setBaseAmount] = useState<number>(1);
   const rate = 0.74; // 1 SGD = 0.74 USD
+
+  const handleSocialLogin = (provider: string) => {
+    setIsLoading(true);
+    // Simulate authentication
+    setTimeout(() => {
+      setUser({ name: "Alex Traveler", email: `alex@${provider.toLowerCase()}.com` });
+      setIsLoading(false);
+      setView('home');
+    }, 1200);
+  };
 
   const handleGuestEntry = () => {
     setShowGuestWarning(true);
@@ -84,9 +96,9 @@ const App: React.FC = () => {
       }, 1000);
   };
 
-  // Ensure all monochromatic icons are visible (white) on the dark background
   const getLogoStyle = (id: string) => {
-    return { filter: 'brightness(0) invert(1)' };
+    if (id === 'apple' || id === 'uber') return { filter: 'brightness(0) invert(1)' };
+    return {};
   };
 
   return (
@@ -99,7 +111,7 @@ const App: React.FC = () => {
         </div>
         {view !== 'welcome' && (
           <div className="px-3 py-1 bg-slate-900 rounded-full text-xs font-medium border border-slate-800 text-slate-400">
-            Guest
+            {user ? user.name : 'Guest'}
           </div>
         )}
       </header>
@@ -108,28 +120,49 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col p-6 max-w-lg mx-auto w-full relative">
         
         {view === 'welcome' && (
-          <div className="flex-1 flex flex-col justify-center text-center">
-            <h1 className="text-4xl font-extrabold mb-4 leading-tight">Pay Anywhere in <span className="text-blue-500">Singapore</span></h1>
-            <p className="text-slate-400 mb-6 text-lg">Bridge your global funds to local PayNow & PayLah! QR codes instantly.</p>
+          <div className="flex-1 flex flex-col justify-center">
+            <div className="text-center mb-10">
+              <h1 className="text-4xl font-extrabold mb-4 leading-tight">Secure Payments for <span className="text-blue-500">Travelers</span></h1>
+              <p className="text-slate-400 text-lg">Your global funds, bridged to local QR networks instantly.</p>
+            </div>
             
-            <div className="mb-10 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
-                <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-1">Our Promise</p>
-                <p className="text-sm text-blue-300 font-medium italic">"Lowest interest, no additional fees, just exchange rate."</p>
+            <div className="space-y-3 mb-10">
+              <button 
+                onClick={() => handleSocialLogin('Google')}
+                className="w-full bg-white text-slate-900 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-slate-100 transition-all shadow-lg active:scale-[0.98]"
+              >
+                <img src="https://www.vectorlogo.zone/logos/google/google-icon.svg" className="w-5 h-5" alt="Google" />
+                Continue with Google
+              </button>
+              <button 
+                onClick={() => handleSocialLogin('Microsoft')}
+                className="w-full bg-[#2f2f2f] text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-[#3f3f3f] transition-all shadow-lg active:scale-[0.98]"
+              >
+                <img src="https://www.vectorlogo.zone/logos/microsoft/microsoft-icon.svg" className="w-5 h-5" alt="Microsoft" />
+                Continue with Microsoft
+              </button>
+              <button 
+                onClick={() => handleSocialLogin('Apple')}
+                className="w-full bg-slate-100 text-slate-950 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-white transition-all shadow-lg active:scale-[0.98]"
+              >
+                <img src="https://www.vectorlogo.zone/logos/apple/apple-icon.svg" className="w-5 h-5" alt="Apple" />
+                Continue with Apple
+              </button>
             </div>
 
-            <div className="space-y-4">
-              <button onClick={handleGuestEntry} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-900/20 active:scale-95 transition-all">
-                Continue as Guest
-              </button>
-              <button className="w-full bg-slate-900 border border-slate-800 text-slate-300 py-4 rounded-2xl font-bold transition-all">
-                Login with TouristID
-              </button>
+            <div className="relative mb-10 text-center">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-800"></div></div>
+                <span className="relative px-4 bg-slate-950 text-slate-500 text-xs font-bold uppercase tracking-widest">or</span>
             </div>
+
+            <button onClick={handleGuestEntry} className="w-full bg-slate-900 border border-slate-800 text-slate-300 py-4 rounded-2xl font-bold transition-all hover:bg-slate-800">
+              Explore as Guest
+            </button>
             
-            <div className="mt-12 flex justify-center items-center gap-6 opacity-60">
-              {PAYMENT_METHODS.slice(0, 4).map(m => (
-                <img key={m.id} src={m.icon} style={getLogoStyle(m.id)} className="h-4 w-auto" alt={m.name} />
-              ))}
+            <div className="mt-12 flex justify-center items-center gap-6 opacity-40">
+              <img src={PAYMENT_METHODS[0].icon} className="h-4 w-auto" alt="Visa" />
+              <img src={PAYMENT_METHODS[1].icon} className="h-4 w-auto" alt="MC" />
+              <img src={PAYMENT_METHODS[2].icon} style={getLogoStyle('apple')} className="h-5 w-auto" alt="Apple" />
             </div>
           </div>
         )}
@@ -161,7 +194,7 @@ const App: React.FC = () => {
               <span className="relative z-10 text-xl font-bold text-white tracking-widest uppercase">Scan QR</span>
             </button>
 
-            <h3 className="text-slate-400 font-bold mb-4 uppercase text-xs tracking-widest px-2">Payment Methods</h3>
+            <h3 className="text-slate-400 font-bold mb-4 uppercase text-xs tracking-widest px-2">Global Sources</h3>
             <div className="grid grid-cols-2 gap-4">
               {PAYMENT_METHODS.map(method => (
                 <button
@@ -177,7 +210,7 @@ const App: React.FC = () => {
                     <img 
                       src={method.icon} 
                       style={getLogoStyle(method.id)} 
-                      className="max-h-full max-w-[80%] object-contain" 
+                      className="max-h-full max-w-[90%] object-contain" 
                       alt={method.name} 
                     />
                   </div>
@@ -204,9 +237,6 @@ const App: React.FC = () => {
                             </button>
                         ))}
                     </div>
-                    <p className="text-xs text-slate-500 text-center italic">
-                        * Instant top-up with <strong>no additional fees</strong>. Funds are ready for immediate QR scan payment.
-                    </p>
                 </div>
                 <button onClick={() => setView('home')} className="w-full text-slate-500 font-bold">Back to Dashboard</button>
             </div>
@@ -241,9 +271,6 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
-            <p className="text-xs text-slate-500 text-center px-4 italic leading-relaxed">
-              * Rates are indicative. TouristPay provides the <strong>lowest interest rates</strong> with <strong>no additional fees</strong> beyond the standard exchange spread.
-            </p>
           </div>
         )}
 
@@ -261,8 +288,8 @@ const App: React.FC = () => {
               </div>
 
               <div className="p-4 bg-blue-500/5 rounded-2xl border border-blue-500/10 mb-2">
-                <p className="text-[10px] text-blue-400 leading-relaxed font-bold italic">
-                  "Lowest interest rates, no additional service fees - just pure exchange rate value."
+                <p className="text-[10px] text-blue-400 leading-relaxed font-bold italic text-center">
+                  "Bridge active: Converting {selectedMethod?.name} funds to PayNow Network."
                 </p>
               </div>
             </div>
@@ -306,10 +333,6 @@ const App: React.FC = () => {
               </div>
             </div>
             
-            <div className="text-center mb-8">
-              <p className="text-xs text-slate-500 font-medium italic uppercase tracking-wider">Lowest interest, no additional fees, just exchange rate.</p>
-            </div>
-
             <button onClick={handlePaymentSubmit} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-xl shadow-xl shadow-blue-900/40 active:scale-95 transition-all">
               Pay ${merchant?.amount?.toFixed(2)} SGD
             </button>
@@ -322,9 +345,9 @@ const App: React.FC = () => {
               <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             </div>
             <h1 className="text-3xl font-black mb-2 text-white">Bridge Successful!</h1>
-            <p className="text-slate-400 mb-8 max-w-xs leading-relaxed">Paid <strong>${merchant?.amount?.toFixed(2)} SGD</strong> to {merchant?.name}. <br/>No additional fees were charged.</p>
+            <p className="text-slate-400 mb-8 max-w-xs leading-relaxed">Paid <strong>${merchant?.amount?.toFixed(2)} SGD</strong> to {merchant?.name}.</p>
             <button onClick={() => setView('home')} className="w-full bg-slate-900 border border-slate-800 text-white py-4 rounded-2xl font-bold transition-all">
-              Done
+              Back to Dashboard
             </button>
           </div>
         )}
@@ -360,7 +383,7 @@ const App: React.FC = () => {
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center">
           <div className="animate-pulse flex flex-col items-center">
              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl font-black mb-4 shadow-[0_0_30px_rgba(59,130,246,0.5)]">T</div>
-             <div className="text-blue-500 font-bold tracking-widest uppercase text-xs">Secure Bridge Processing...</div>
+             <div className="text-blue-500 font-bold tracking-widest uppercase text-xs">Secure Authentication...</div>
           </div>
         </div>
       )}
