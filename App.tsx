@@ -1,0 +1,378 @@
+
+import React, { useState } from 'react';
+import { AppView, PaymentMethod, MerchantDetails } from './types';
+import { PAYMENT_METHODS, APP_THEME } from './constants';
+import { analyzeMerchantQR, getTravelTip } from './services/geminiService';
+import Scanner from './components/Scanner';
+import GuestWarning from './components/GuestWarning';
+
+const App: React.FC = () => {
+  const [view, setView] = useState<AppView>('welcome');
+  const [showGuestWarning, setShowGuestWarning] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(PAYMENT_METHODS[0]);
+  const [merchant, setMerchant] = useState<MerchantDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [tip, setTip] = useState<string>("");
+  const [balance, setBalance] = useState<number>(0.00);
+
+  // Exchange Rate State
+  const [baseAmount, setBaseAmount] = useState<number>(1);
+  const rate = 0.74; // 1 SGD = 0.74 USD
+
+  const handleGuestEntry = () => {
+    setShowGuestWarning(true);
+  };
+
+  const proceedAsGuest = () => {
+    setShowGuestWarning(false);
+    setView('home');
+  };
+
+  const handleScanSuccess = async (data: string) => {
+    setIsLoading(true);
+    setView('payment-confirm');
+    
+    const analysis = await analyzeMerchantQR(data);
+    if (analysis) {
+      setMerchant({
+        name: analysis.name,
+        uen: analysis.uen,
+        amount: analysis.suggestedAmount || 10.00,
+        currency: "SGD",
+        verified: analysis.safetyScore > 80
+      });
+      const travelTip = await getTravelTip(analysis.category);
+      setTip(travelTip);
+    } else {
+      setMerchant({
+        name: "Local Hawker Centre",
+        uen: "T12345678G",
+        amount: 10.00,
+        currency: "SGD",
+        verified: true
+      });
+    }
+    setIsLoading(false);
+  };
+
+  const handleConfirmOrder = () => {
+    // If user has enough balance, they can pay directly.
+    // Otherwise, we go through card entry or payment method flow.
+    if (balance >= (merchant?.amount || 0)) {
+        handlePaymentSubmit();
+    } else if (selectedMethod?.type === 'card') {
+      setView('card-entry');
+    } else {
+      handlePaymentSubmit();
+    }
+  };
+
+  const handlePaymentSubmit = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      if (balance >= (merchant?.amount || 0)) {
+          setBalance(prev => prev - (merchant?.amount || 0));
+      }
+      setIsLoading(false);
+      setView('success');
+    }, 1500);
+  };
+
+  const handleTopUp = (amt: number) => {
+      setIsLoading(true);
+      setTimeout(() => {
+          setBalance(prev => prev + amt);
+          setIsLoading(false);
+          setView('home');
+      }, 1000);
+  };
+
+  // Helper to ensure logos are visible on dark background
+  const getLogoStyle = (id: string) => {
+    // Apple, Uber, and Google (partially) are often dark/black SVGs. 
+    // Inverting them makes them white and visible on slate-950.
+    if (id === 'apple' || id === 'uber') return { filter: 'brightness(0) invert(1)' };
+    return {};
+  };
+
+  return (
+    <div className={`min-h-screen ${APP_THEME.bg} text-slate-100 flex flex-col`}>
+      {/* Header */}
+      <header className="p-6 flex items-center justify-between z-10">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
+          <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black text-xl shadow-lg shadow-blue-900/50">T</div>
+          <span className="text-xl font-bold tracking-tight text-white">TouristPay</span>
+        </div>
+        {view !== 'welcome' && (
+          <div className="px-3 py-1 bg-slate-900 rounded-full text-xs font-medium border border-slate-800 text-slate-400">
+            Guest
+          </div>
+        )}
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col p-6 max-w-lg mx-auto w-full relative">
+        
+        {view === 'welcome' && (
+          <div className="flex-1 flex flex-col justify-center text-center">
+            <h1 className="text-4xl font-extrabold mb-4 leading-tight">Pay Anywhere in <span className="text-blue-500">Singapore</span></h1>
+            <p className="text-slate-400 mb-6 text-lg">Bridge your global funds to local PayNow & PayLah! QR codes instantly.</p>
+            
+            <div className="mb-10 p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
+                <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-1">Our Promise</p>
+                <p className="text-sm text-blue-300 font-medium italic">"Lowest interest, no additional fees, just exchange rate."</p>
+            </div>
+
+            <div className="space-y-4">
+              <button onClick={handleGuestEntry} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold text-lg shadow-xl shadow-blue-900/20 active:scale-95 transition-all">
+                Continue as Guest
+              </button>
+              <button className="w-full bg-slate-900 border border-slate-800 text-slate-300 py-4 rounded-2xl font-bold transition-all">
+                Login with TouristID
+              </button>
+            </div>
+            
+            <div className="mt-12 flex justify-center items-center gap-6 opacity-80">
+              <img src={PAYMENT_METHODS[0].icon} className="h-4 w-auto grayscale brightness-200" alt="Visa" />
+              <img src={PAYMENT_METHODS[1].icon} className="h-4 w-auto grayscale brightness-200" alt="MC" />
+              <img src={PAYMENT_METHODS[4].icon} className="h-5 w-auto" alt="Grab" />
+              <img src={PAYMENT_METHODS[2].icon} style={getLogoStyle('apple')} className="h-5 w-auto" alt="Apple" />
+            </div>
+          </div>
+        )}
+
+        {view === 'home' && (
+          <div className="flex-1 animate-in fade-in duration-500">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 mb-8 flex justify-between items-center shadow-lg">
+              <div>
+                <h2 className="text-slate-400 font-medium mb-1 uppercase text-[10px] tracking-widest">Digital Wallet Balance</h2>
+                <div className="text-3xl font-black text-white">${balance.toFixed(2)} <span className="text-sm font-normal text-slate-500">SGD</span></div>
+              </div>
+              <button 
+                onClick={() => setView('top-up')}
+                className="bg-blue-600/20 text-blue-400 border border-blue-500/30 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-blue-600 hover:text-white transition-all active:scale-95"
+              >
+                + Top Up
+              </button>
+            </div>
+
+            <button onClick={() => setView('scan')} className="group relative flex flex-col items-center justify-center bg-blue-600 aspect-square rounded-[2.5rem] shadow-2xl shadow-blue-900/40 mb-12 overflow-hidden active:scale-95 transition-all w-full max-w-[280px] mx-auto">
+              <div className="absolute inset-0 bg-gradient-to-tr from-blue-700 to-transparent opacity-50"></div>
+              <div className="relative z-10 w-24 h-24 border-2 border-white/20 rounded-2xl mb-4 flex items-center justify-center">
+                <div className="w-16 h-1 bg-white/40 absolute top-1/2 -mt-0.5 w-full animate-pulse"></div>
+                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7V5a2 2 0 012-2h2m10 0h2a2 2 0 012 2v2m0 10v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h2v2H7zM15 7h2v2h-2zM7 15h2v2H7z" />
+                </svg>
+              </div>
+              <span className="relative z-10 text-xl font-bold text-white tracking-widest uppercase">Scan QR</span>
+            </button>
+
+            <h3 className="text-slate-400 font-bold mb-4 uppercase text-xs tracking-widest px-2">Payment Methods</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {PAYMENT_METHODS.map(method => (
+                <button
+                  key={method.id}
+                  onClick={() => setSelectedMethod(method)}
+                  className={`p-4 h-24 rounded-2xl border transition-all flex flex-col justify-center items-center gap-2 ${
+                    selectedMethod?.id === method.id 
+                      ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_15px_rgba(59,130,246,0.1)]' 
+                      : 'border-slate-800 bg-slate-900/50 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="h-10 w-full flex items-center justify-center">
+                    <img 
+                      src={method.icon} 
+                      style={getLogoStyle(method.id)} 
+                      className="max-h-full max-w-[90%] object-contain" 
+                      alt={method.name} 
+                    />
+                  </div>
+                  <div className="text-[9px] text-slate-500 uppercase font-black tracking-tighter">{method.name}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {view === 'top-up' && (
+            <div className="flex-1 animate-in fade-in duration-500">
+                <h2 className="text-2xl font-black mb-6">Top Up Wallet</h2>
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 mb-8">
+                    <label className="block text-slate-500 text-xs font-bold uppercase mb-4">Amount to Add (SGD)</label>
+                    <div className="grid grid-cols-3 gap-3 mb-8">
+                        {[10, 20, 50, 100, 200, 500].map(amt => (
+                            <button 
+                                key={amt}
+                                onClick={() => handleTopUp(amt)}
+                                className="p-4 bg-slate-800 border border-slate-700 rounded-xl font-bold hover:bg-blue-600 hover:border-blue-500 transition-all text-sm"
+                            >
+                                +${amt}
+                            </button>
+                        ))}
+                    </div>
+                    <p className="text-xs text-slate-500 text-center italic">
+                        * Instant top-up with <strong>no additional fees</strong>. Funds are ready for immediate QR scan payment.
+                    </p>
+                </div>
+                <button onClick={() => setView('home')} className="w-full text-slate-500 font-bold">Back to Dashboard</button>
+            </div>
+        )}
+
+        {view === 'rates' && (
+          <div className="flex-1 animate-in fade-in duration-500">
+            <h2 className="text-2xl font-bold mb-6">Exchange Rates</h2>
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 mb-6">
+              <div className="mb-6">
+                <label className="block text-slate-500 text-xs font-bold uppercase mb-2">You Give (SGD)</label>
+                <div className="flex items-center bg-slate-800 rounded-xl p-4 border border-slate-700">
+                  <input 
+                    type="number" 
+                    value={baseAmount} 
+                    onChange={(e) => setBaseAmount(Number(e.target.value))}
+                    className="bg-transparent text-2xl font-bold w-full outline-none text-blue-400"
+                  />
+                  <span className="font-bold">SGD</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-center my-2">
+                <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700">
+                  <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+              </div>
+              <div>
+                <label className="block text-slate-500 text-xs font-bold uppercase mb-2">You Get (Estimated USD)</label>
+                <div className="flex items-center bg-slate-800 rounded-xl p-4 border border-slate-700">
+                  <div className="text-2xl font-bold w-full">{(baseAmount * rate).toFixed(2)}</div>
+                  <span className="font-bold">USD</span>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 text-center px-4 italic leading-relaxed">
+              * Rates are indicative. TouristPay provides the <strong>lowest interest rates</strong> with <strong>no additional fees</strong> beyond the standard exchange spread.
+            </p>
+          </div>
+        )}
+
+        {view === 'scan' && <Scanner onScan={handleScanSuccess} onClose={() => setView('home')} />}
+
+        {view === 'payment-confirm' && merchant && (
+          <div className="flex-1 flex flex-col animate-in slide-in-from-bottom-10 duration-500">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 mb-6 relative shadow-2xl">
+              <h2 className="text-slate-400 text-xs font-bold uppercase mb-1">Paying To</h2>
+              <div className="text-2xl font-black text-white mb-6">{merchant.name}</div>
+              
+              <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700 mb-6 flex justify-between items-center">
+                <div className="text-sm font-bold text-slate-400">Total</div>
+                <div className="text-2xl font-black text-blue-400">${merchant.amount?.toFixed(2)} <span className="text-xs font-normal text-slate-500">SGD</span></div>
+              </div>
+
+              <div className="p-4 bg-blue-500/5 rounded-2xl border border-blue-500/10 mb-2">
+                <p className="text-[10px] text-blue-400 leading-relaxed font-bold italic">
+                  "Lowest interest rates, no additional service fees - just pure exchange rate value."
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 mb-8 flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <img src={selectedMethod?.icon} style={getLogoStyle(selectedMethod?.id || '')} className="h-6 w-auto object-contain" alt={selectedMethod?.name} />
+                <span className="font-bold">{selectedMethod?.name}</span>
+              </div>
+              <button className="text-blue-500 text-xs font-bold" onClick={() => setView('home')}>Change</button>
+            </div>
+
+            <button onClick={handleConfirmOrder} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-xl shadow-xl shadow-blue-900/40 active:scale-95 transition-all">
+              {balance >= (merchant?.amount || 0) ? 'Pay with Balance' : 'Confirm & Continue'}
+            </button>
+          </div>
+        )}
+
+        {view === 'card-entry' && (
+          <div className="flex-1 animate-in slide-in-from-right-10 duration-500">
+            <h2 className="text-2xl font-black mb-6">Payment Details</h2>
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 mb-8">
+              <div className="mb-6 h-12 flex items-center justify-center">
+                <img src={selectedMethod?.icon} style={getLogoStyle(selectedMethod?.id || '')} className="h-full object-contain" alt="Card Logo" />
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-slate-500 text-[10px] font-bold uppercase mb-2">Card Number</label>
+                  <input type="text" placeholder="**** **** **** 4242" className="w-full bg-slate-800 p-4 rounded-xl border border-slate-700 outline-none focus:border-blue-500 transition-colors font-mono" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-500 text-[10px] font-bold uppercase mb-2">Expiry Date</label>
+                    <input type="text" placeholder="MM / YY" className="w-full bg-slate-800 p-4 rounded-xl border border-slate-700 outline-none focus:border-blue-500 font-mono" />
+                  </div>
+                  <div>
+                    <label className="block text-slate-500 text-[10px] font-bold uppercase mb-2">CVV</label>
+                    <input type="text" placeholder="***" className="w-full bg-slate-800 p-4 rounded-xl border border-slate-700 outline-none focus:border-blue-500 font-mono" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center mb-8">
+              <p className="text-xs text-slate-500 font-medium italic uppercase tracking-wider">Lowest interest, no additional fees, just exchange rate.</p>
+            </div>
+
+            <button onClick={handlePaymentSubmit} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-xl shadow-xl shadow-blue-900/40 active:scale-95 transition-all">
+              Pay ${merchant?.amount?.toFixed(2)} SGD
+            </button>
+          </div>
+        )}
+
+        {view === 'success' && (
+          <div className="flex-1 flex flex-col items-center justify-center text-center animate-in zoom-in duration-500">
+            <div className="w-24 h-24 bg-green-500 text-white rounded-full flex items-center justify-center mb-8 shadow-2xl shadow-green-900/20">
+              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <h1 className="text-3xl font-black mb-2 text-white">Bridge Successful!</h1>
+            <p className="text-slate-400 mb-8 max-w-xs leading-relaxed">Paid <strong>${merchant?.amount?.toFixed(2)} SGD</strong> to {merchant?.name}. <br/>No additional fees were charged.</p>
+            <button onClick={() => setView('home')} className="w-full bg-slate-900 border border-slate-800 text-white py-4 rounded-2xl font-bold transition-all">
+              Done
+            </button>
+          </div>
+        )}
+
+      </main>
+
+      {/* Footer Nav */}
+      {view !== 'welcome' && view !== 'scan' && (
+        <nav className="bg-slate-950 border-t border-slate-900 p-6 flex justify-around sticky bottom-0 z-20">
+          <button onClick={() => setView('home')} className={`flex flex-col items-center gap-1 ${view === 'home' || view === 'top-up' ? 'text-blue-500' : 'text-slate-500'}`}>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span className="text-[9px] font-black uppercase">Home</span>
+          </button>
+          <button onClick={() => setView('scan')} className="flex flex-col items-center gap-1 text-slate-500">
+            <div className="w-12 h-12 bg-blue-600 rounded-2xl -mt-10 shadow-lg shadow-blue-900/50 flex items-center justify-center text-white active:scale-90 transition-all border-4 border-slate-950">
+               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7V5a2 2 0 012-2h2m10 0h2a2 2 0 012 2v2m0 10v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h2v2H7zM15 7h2v2h-2zM7 15h2v2H7z" />
+                </svg>
+            </div>
+            <span className="text-[9px] font-black uppercase">Scan</span>
+          </button>
+          <button onClick={() => setView('rates')} className={`flex flex-col items-center gap-1 ${view === 'rates' ? 'text-blue-500' : 'text-slate-500'}`}>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            <span className="text-[9px] font-black uppercase">Rates</span>
+          </button>
+        </nav>
+      )}
+
+      {showGuestWarning && <GuestWarning onContinue={proceedAsGuest} />}
+      
+      {isLoading && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center">
+          <div className="animate-pulse flex flex-col items-center">
+             <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl font-black mb-4 shadow-[0_0_30px_rgba(59,130,246,0.5)]">T</div>
+             <div className="text-blue-500 font-bold tracking-widest uppercase text-xs">Secure Bridge Processing...</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default App;

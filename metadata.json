@@ -1,0 +1,7 @@
+{
+  "name": "TouristPay - Global QR Link",
+  "description": "A seamless payment bridge for travelers to pay via PayNow/PayLah QR codes using global credit cards and digital wallets without signups.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
