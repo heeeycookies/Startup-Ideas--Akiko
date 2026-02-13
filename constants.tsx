@@ -1,46 +1,45 @@
-
 import { PaymentMethod } from './types';
 
 export const PAYMENT_METHODS: PaymentMethod[] = [
   { 
     id: 'visa', 
     name: 'Visa', 
-    icon: 'https://upload.wikimedia.org/wikipedia/commons/d/d6/Visa_2021.svg', 
+    icon: 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/visa.svg', 
     type: 'card', 
     category: 'Credit/Debit' 
   },
   { 
     id: 'mc', 
     name: 'Mastercard', 
-    icon: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg', 
+    icon: 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/mastercard.svg', 
     type: 'card', 
     category: 'Credit/Debit' 
   },
   { 
     id: 'apple', 
     name: 'Apple Pay', 
-    icon: 'https://upload.wikimedia.org/wikipedia/commons/b/b0/Apple_Pay_logo.svg', 
+    icon: 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/applepay.svg', 
     type: 'wallet', 
     category: 'Wallets' 
   },
   { 
     id: 'google', 
     name: 'Google Pay', 
-    icon: 'https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg', 
+    icon: 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/googlepay.svg', 
     type: 'wallet', 
     category: 'Wallets' 
   },
   { 
     id: 'grab', 
-    name: 'GrabPay', 
-    icon: 'https://upload.wikimedia.org/wikipedia/commons/4/4e/GrabPay_logo.svg', 
+    name: 'Grab', 
+    icon: 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/grab.svg', 
     type: 'wallet', 
     category: 'Regional' 
   },
   { 
     id: 'uber', 
-    name: 'Uber Wallet', 
-    icon: 'https://upload.wikimedia.org/wikipedia/commons/5/58/Uber_logo_2018.svg', 
+    name: 'Uber', 
+    icon: 'https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/uber.svg', 
     type: 'wallet', 
     category: 'Regional' 
   },

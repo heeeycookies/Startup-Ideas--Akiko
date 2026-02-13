@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { AppView, PaymentMethod, MerchantDetails } from './types';
 import { PAYMENT_METHODS, APP_THEME } from './constants';
@@ -56,8 +55,6 @@ const App: React.FC = () => {
   };
 
   const handleConfirmOrder = () => {
-    // If user has enough balance, they can pay directly.
-    // Otherwise, we go through card entry or payment method flow.
     if (balance >= (merchant?.amount || 0)) {
         handlePaymentSubmit();
     } else if (selectedMethod?.type === 'card') {
@@ -87,12 +84,9 @@ const App: React.FC = () => {
       }, 1000);
   };
 
-  // Helper to ensure logos are visible on dark background
+  // Ensure all monochromatic icons are visible (white) on the dark background
   const getLogoStyle = (id: string) => {
-    // Apple, Uber, and Google (partially) are often dark/black SVGs. 
-    // Inverting them makes them white and visible on slate-950.
-    if (id === 'apple' || id === 'uber') return { filter: 'brightness(0) invert(1)' };
-    return {};
+    return { filter: 'brightness(0) invert(1)' };
   };
 
   return (
@@ -132,11 +126,10 @@ const App: React.FC = () => {
               </button>
             </div>
             
-            <div className="mt-12 flex justify-center items-center gap-6 opacity-80">
-              <img src={PAYMENT_METHODS[0].icon} className="h-4 w-auto grayscale brightness-200" alt="Visa" />
-              <img src={PAYMENT_METHODS[1].icon} className="h-4 w-auto grayscale brightness-200" alt="MC" />
-              <img src={PAYMENT_METHODS[4].icon} className="h-5 w-auto" alt="Grab" />
-              <img src={PAYMENT_METHODS[2].icon} style={getLogoStyle('apple')} className="h-5 w-auto" alt="Apple" />
+            <div className="mt-12 flex justify-center items-center gap-6 opacity-60">
+              {PAYMENT_METHODS.slice(0, 4).map(m => (
+                <img key={m.id} src={m.icon} style={getLogoStyle(m.id)} className="h-4 w-auto" alt={m.name} />
+              ))}
             </div>
           </div>
         )}
@@ -184,7 +177,7 @@ const App: React.FC = () => {
                     <img 
                       src={method.icon} 
                       style={getLogoStyle(method.id)} 
-                      className="max-h-full max-w-[90%] object-contain" 
+                      className="max-h-full max-w-[80%] object-contain" 
                       alt={method.name} 
                     />
                   </div>
