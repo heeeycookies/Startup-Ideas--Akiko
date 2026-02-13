@@ -17,7 +17,6 @@ const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
     setIsDetecting(false);
     
     try {
-      // Check if mediaDevices is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error('Camera API not supported in this browser');
       }
@@ -36,10 +35,10 @@ const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
         videoRef.current.srcObject = stream;
         setIsDetecting(true);
         
-        // Simulated successful scan for demo after 3 seconds
+        // Reduced simulated successful scan from 3000ms to 1200ms
         const scanTimeout = setTimeout(() => {
           handleAutoScan();
-        }, 3000);
+        }, 1200);
 
         return () => clearTimeout(scanTimeout);
       }
@@ -77,13 +76,11 @@ const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
   }, [retryCount]);
 
   const handleAutoScan = () => {
-    // Simulated PayNow standard QR string
     const mockQRData = "00020101021226480009SG.PAYNOW010120213201402246R030105204000053037025802SG5913MERCHANT NAME6009SINGAPORE62070103SG16304";
     onScan(mockQRData);
   };
 
   const handleManualEntry = () => {
-    // Directly trigger simulated success for users without cameras
     handleAutoScan();
   };
 
@@ -126,18 +123,13 @@ const Scanner: React.FC<ScannerProps> = ({ onScan, onClose }) => {
               playsInline
               className="absolute inset-0 w-full h-full object-cover"
             />
-            {/* High-tech Scanning UI Overlay */}
             <div className="absolute inset-0 border-[48px] border-slate-950/60 pointer-events-none flex items-center justify-center">
               <div className="w-full h-full border border-blue-500/30 rounded-3xl relative">
-                {/* Scanning line animation */}
                 <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-blue-400 to-transparent shadow-[0_0_20px_rgba(59,130,246,1)] animate-[scan_2.5s_ease-in-out_infinite] z-20" />
-                
-                {/* Corner Accents */}
                 <div className="absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 border-blue-500 -mt-1 -ml-1 rounded-tl-xl" />
                 <div className="absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 border-blue-500 -mt-1 -mr-1 rounded-tr-xl" />
                 <div className="absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 border-blue-500 -mb-1 -ml-1 rounded-bl-xl" />
                 <div className="absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 border-blue-500 -mb-1 -mr-1 rounded-br-xl" />
-                
                 <div className="absolute inset-0 bg-blue-500/5 animate-pulse" />
               </div>
             </div>
