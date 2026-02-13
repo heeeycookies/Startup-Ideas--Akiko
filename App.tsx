@@ -9,6 +9,7 @@ import GuestWarning from './components/GuestWarning';
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('welcome');
   const [showGuestWarning, setShowGuestWarning] = useState(false);
+  const [isMethodModalOpen, setIsMethodModalOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(PAYMENT_METHODS[0]);
   const [merchant, setMerchant] = useState<MerchantDetails | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,12 +23,11 @@ const App: React.FC = () => {
 
   const handleSocialLogin = (provider: string) => {
     setIsLoading(true);
-    // Simulate authentication
     setTimeout(() => {
       setUser({ name: "Alex Traveler", email: `alex@${provider.toLowerCase()}.com` });
       setIsLoading(false);
       setView('home');
-    }, 1200);
+    }, 600); // Reduced from 1200ms
   };
 
   const handleGuestEntry = () => {
@@ -84,7 +84,7 @@ const App: React.FC = () => {
       }
       setIsLoading(false);
       setView('success');
-    }, 1500);
+    }, 800); // Reduced from 1500ms
   };
 
   const handleTopUp = (amt: number) => {
@@ -93,7 +93,7 @@ const App: React.FC = () => {
           setBalance(prev => prev + amt);
           setIsLoading(false);
           setView('home');
-      }, 1000);
+      }, 500); // Reduced from 1000ms
   };
 
   const getLogoStyle = (id: string) => {
@@ -299,7 +299,12 @@ const App: React.FC = () => {
                 <img src={selectedMethod?.icon} style={getLogoStyle(selectedMethod?.id || '')} className="h-6 w-auto object-contain" alt={selectedMethod?.name} />
                 <span className="font-bold">{selectedMethod?.name}</span>
               </div>
-              <button className="text-blue-500 text-xs font-bold" onClick={() => setView('home')}>Change</button>
+              <button 
+                className="text-blue-500 text-xs font-bold hover:text-blue-400 transition-colors" 
+                onClick={() => setIsMethodModalOpen(true)}
+              >
+                Change
+              </button>
             </div>
 
             <button onClick={handleConfirmOrder} className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-xl shadow-xl shadow-blue-900/40 active:scale-95 transition-all">
@@ -377,13 +382,50 @@ const App: React.FC = () => {
         </nav>
       )}
 
+      {/* Payment Method Modal */}
+      {isMethodModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-slate-950/90 backdrop-blur-md flex items-end justify-center animate-in fade-in duration-300">
+          <div className="bg-slate-900 border-t border-slate-800 w-full max-w-lg rounded-t-[3rem] p-8 shadow-2xl animate-in slide-in-from-bottom-10 duration-500">
+            <div className="w-12 h-1 bg-slate-800 rounded-full mx-auto mb-8"></div>
+            <h3 className="text-xl font-bold mb-6 text-white text-center">Switch Payment Method</h3>
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              {PAYMENT_METHODS.map(method => (
+                <button
+                  key={method.id}
+                  onClick={() => {
+                    setSelectedMethod(method);
+                    setIsMethodModalOpen(false);
+                  }}
+                  className={`p-4 h-24 rounded-2xl border transition-all flex flex-col justify-center items-center gap-2 ${
+                    selectedMethod?.id === method.id 
+                      ? 'border-blue-500 bg-blue-500/10' 
+                      : 'border-slate-800 bg-slate-800/50 hover:bg-slate-800'
+                  }`}
+                >
+                  <div className="h-10 w-full flex items-center justify-center">
+                    <img src={method.icon} style={getLogoStyle(method.id)} className="max-h-full max-w-[90%] object-contain" alt={method.name} />
+                  </div>
+                  <span className="text-[9px] text-slate-500 uppercase font-black tracking-widest">{method.name}</span>
+                </button>
+              ))}
+            </div>
+            <button 
+              onClick={() => setIsMethodModalOpen(false)}
+              className="w-full bg-slate-800 text-slate-400 py-4 rounded-2xl font-bold hover:text-white transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {showGuestWarning && <GuestWarning onContinue={proceedAsGuest} />}
       
       {isLoading && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] flex items-center justify-center">
           <div className="animate-pulse flex flex-col items-center">
              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl font-black mb-4 shadow-[0_0_30px_rgba(59,130,246,0.5)]">T</div>
-             <div className="text-blue-500 font-bold tracking-widest uppercase text-xs">Secure Authentication...</div>
+             <div className="text-blue-500 font-bold tracking-widest uppercase text-xs">Processing Transaction...</div>
           </div>
         </div>
       )}
